@@ -1,0 +1,43 @@
+# 环境变量
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 日志
+logs/
+*.log
+
+# 数据
+data/chroma_db/
+*.db
+*.sqlite3
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+docker/data/
+
+# OS
+.DS_Store
+Thumbs.db

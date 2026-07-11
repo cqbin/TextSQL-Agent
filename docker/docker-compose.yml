@@ -1,0 +1,72 @@
+# Docker Compose 一键启动
+# PostgreSQL + Redis + Python沙盒 + API服务
+
+version: '3.8'
+
+services:
+  # 业务数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: textsql-postgres
+    environment:
+      POSTGRES_DB: retail_db
+      POSTGRES_USER: readonly_user
+      POSTGRES_PASSWORD: readonly_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/sql/init_database.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U readonly_user -d retail_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: textsql-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # Python 沙盒
+  sandbox:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sandbox
+    image: python-sandbox:latest
+    container_name: textsql-sandbox
+    # 不常驻，按需启动
+    restart: "no"
+
+  # API 服务
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: textsql-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: retail_db
+      DB_USER: readonly_user
+      DB_PASSWORD: readonly_pass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  postgres_data:
+  redis_data:

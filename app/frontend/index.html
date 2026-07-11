@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TextSQL-Agent | 企业级自助数据分析</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5; height: 100vh; display: flex; flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 16px 32px; display: flex; align-items: center;
+            justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header .badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-size: 12px; }
+        .main { display: flex; flex: 1; overflow: hidden; }
+        .sidebar {
+            width: 260px; background: white; border-right: 1px solid #e0e0e0;
+            padding: 20px; overflow-y: auto;
+        }
+        .sidebar h3 { font-size: 14px; color: #666; margin-bottom: 12px; text-transform: uppercase; }
+        .domain-card {
+            background: #f8f9fa; border-radius: 8px; padding: 12px;
+            margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .domain-card:hover { background: #e9ecef; }
+        .domain-card.active { background: #667eea; color: white; }
+        .domain-card .name { font-size: 14px; font-weight: 500; }
+        .domain-card .info { font-size: 12px; color: #888; margin-top: 4px; }
+        .domain-card.active .info { color: rgba(255,255,255,0.8); }
+        .chat-area { flex: 1; display: flex; flex-direction: column; }
+        .messages { flex: 1; overflow-y: auto; padding: 24px; }
+        .message { max-width: 80%; margin-bottom: 16px; }
+        .message.user { margin-left: auto; }
+        .message .bubble {
+            padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.6;
+        }
+        .message.user .bubble { background: #667eea; color: white; }
+        .message.assistant .bubble { background: white; border: 1px solid #e0e0e0; }
+        .message.assistant .bubble pre { background: #f8f9fa; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+        .message.assistant .bubble table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+        .message.assistant .bubble th, .message.assistant .bubble td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+        .message.assistant .bubble th { background: #f8f9fa; }
+        .progress-bar { padding: 8px 0; }
+        .progress-step { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: #888; }
+        .progress-step .dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
+        .progress-step.active .dot { background: #667eea; animation: pulse 1s infinite; }
+        .progress-step.done .dot { background: #52c41a; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .input-area { padding: 16px 24px; background: white; border-top: 1px solid #e0e0e0; }
+        .input-wrapper { display: flex; gap: 12px; }
+        .input-wrapper input {
+            flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px;
+            font-size: 14px; outline: none; transition: border-color 0.2s;
+        }
+        .input-wrapper input:focus { border-color: #667eea; }
+        .input-wrapper button {
+            padding: 12px 24px; background: #667eea; color: white; border: none;
+            border-radius: 8px; cursor: pointer; font-size: 14px; transition: background 0.2s;
+        }
+        .input-wrapper button:hover { background: #5568d3; }
+        .input-wrapper button:disabled { background: #ccc; cursor: not-allowed; }
+        .examples { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .example-tag {
+            background: #f0f2f5; padding: 4px 12px; border-radius: 12px; font-size: 12px;
+            color: #555; cursor: pointer; transition: all 0.2s;
+        }
+        .example-tag:hover { background: #e0e0e0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 TextSQL-Agent</h1>
+        <span class="badge">企业级自助数据分析</span>
+    </div>
+    <div class="main">
+        <div class="sidebar">
+            <h3>业务域</h3>
+            <div id="domains"></div>
+            <h3 style="margin-top: 24px;">权限等级</h3>
+            <select id="permission" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;">
+                <option value="low">普通用户</option>
+                <option value="medium">中级用户</option>
+                <option value="high">高级用户</option>
+            </select>
+        </div>
+        <div class="chat-area">
+            <div class="messages" id="messages">
+                <div class="message assistant">
+                    <div class="bubble">
+                        👋 你好！我是 TextSQL-Agent，可以帮你查询和分析业务数据。
+                        <br><br>
+                        试试问我：<strong>"上个月哪个门店销售额最高"</strong> 或 <strong>"哪些商品库存不足"</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="queryInput" placeholder="输入你的问题..." />
+                    <button id="sendBtn" onclick="sendQuery()">发送</button>
+                </div>
+                <div class="examples">
+                    <span class="example-tag" onclick="fillQuery('上月各门店销售额排名')">上月各门店销售额排名</span>
+                    <span class="example-tag" onclick="fillQuery('哪些商品库存低于安全线')">哪些商品库存低于安全线</span>
+                    <span class="example-tag" onclick="fillQuery('各门店毛利率对比')">各门店毛利率对比</span>
+                    <span class="example-tag" onclick="fillQuery('最畅销的商品是什么')">最畅销的商品是什么</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // 加载业务域
+        async function loadDomains() {
+            try {
+                const res = await fetch(`${API_BASE}/api/domains`);
+                const data = await res.json();
+                const container = document.getElementById('domains');
+                container.innerHTML = '';
+                for (const [name, info] of Object.entries(data.domains)) {
+                    const card = document.createElement('div');
+                    card.className = 'domain-card';
+                    card.innerHTML = `<div class="name">${name}</div><div class="info">${info.table_count} 张数据表</div>`;
+                    container.appendChild(card);
+                }
+            } catch (e) { console.error('加载业务域失败', e); }
+        }
+
+        function fillQuery(text) {
+            document.getElementById('queryInput').value = text;
+        }
+
+        async function sendQuery() {
+            const input = document.getElementById('queryInput');
+            const query = input.value.trim();
+            if (!query) return;
+
+            const permission = document.getElementById('permission').value;
+            input.value = '';
+            document.getElementById('sendBtn').disabled = true;
+
+            // 显示用户消息
+            addMessage('user', query);
+
+            // 显示进度
+            const progressId = 'progress-' + Date.now();
+            addProgress(progressId);
+
+            try {
+                // SSE 流式请求
+                const response = await fetch(`${API_BASE}/api/query/stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, user_id: 'web_user', user_permission: permission })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.slice(6));
+                            handleStreamEvent(data, progressId);
+                        }
+                    }
+                }
+            } catch (e) {
+                addMessage('assistant', `❌ 请求失败: ${e.message}`);
+            }
+
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        function handleStreamEvent(data, progressId) {
+            if (data.type === 'progress') {
+                updateProgress(progressId, data.step, data.message);
+            } else if (data.type === 'result') {
+                removeProgress(progressId);
+                const content = formatReport(data.report);
+                addMessage('assistant', content);
+            } else if (data.type === 'error') {
+                removeProgress(progressId);
+                addMessage('assistant', `❌ 错误: ${data.message}`);
+            }
+        }
+
+        function formatReport(report) {
+            // 简单 markdown 渲染
+            return report
+                .replace(/```sql\n([\s\S]*?)\n```/g, '<pre><code>$1</code></pre>')
+                .replace(/```\n([\s\S]*?)\n```/g, '<pre>$1</pre>')
+                .replace(/\|(.+)\|/g, (match) => {
+                    const cells = match.split('|').filter(c => c.trim());
+                    if (cells.every(c => /^[\s-]+$/.test(c))) return '';
+                    return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
+                })
+                .replace(/^## (.+)$/gm, '<h3 style="margin:12px 0 8px;font-size:15px;">$1</h3>')
+                .replace(/^# (.+)$/gm, '<h2 style="margin:0 0 12px;font-size:18px;">$1</h2>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        function addMessage(role, content) {
+            const messages = document.getElementById('messages');
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.innerHTML = `<div class="bubble">${content}</div>`;
+            messages.appendChild(msg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addProgress(id) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.id = id;
+            div.innerHTML = `<div class="bubble"><div class="progress-bar" id="${id}-steps"></div></div>`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function updateProgress(id, step, message) {
+            const container = document.getElementById(`${id}-steps`);
+            const steps = container.querySelectorAll('.progress-step');
+            steps.forEach(s => {
+                if (s.classList.contains('active')) {
+                    s.classList.remove('active');
+                    s.classList.add('done');
+                }
+            });
+            const stepEl = document.createElement('div');
+            stepEl.className = 'progress-step active';
+            stepEl.innerHTML = `<span class="dot"></span><span>${message}</span>`;
+            container.appendChild(stepEl);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+        }
+
+        function removeProgress(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                const steps = el.querySelectorAll('.progress-step.active');
+                steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+                setTimeout(() => el.remove(), 1000);
+            }
+        }
+
+        // 回车发送
+        document.getElementById('queryInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendQuery();
+        });
+
+        // 初始化
+        loadDomains();
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Python 分析沙盒 Dockerfile
+# 构建隔离的 Python 执行环境
+
+FROM python:3.11-slim
+
+# 安装数据分析依赖
+RUN pip install --no-cache-dir \
+    pandas==2.2.3 \
+    matplotlib==3.9.2 \
+    numpy==1.26.4
+
+# 创建工作目录
+WORKDIR /app
+
+# 创建输出目录
+RUN mkdir -p /app/output
+
+# 安全设置：创建非 root 用户
+RUN useradd -m -s /bin/bash sandbox
+USER sandbox
+
+# 默认命令
+CMD ["python"]
