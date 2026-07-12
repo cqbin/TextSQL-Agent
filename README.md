@@ -103,7 +103,10 @@ docker-compose up -d
 
 ```
 TextSQL-Agent/
-├── app/
+├── .github/
+│   └── workflows/          # GitHub Actions CI 配置
+│       └── ci.yml          # Python 自动化测试工作流
+├── app/                    # 核心源码
 │   ├── agent/              # Agent 核心模块
 │   │   ├── state.py        # AgentState 状态定义
 │   │   ├── workflow.py     # LangGraph 工作流编排
@@ -125,10 +128,10 @@ TextSQL-Agent/
 │   │   └── server.py       # RESTful API + SSE
 │   ├── frontend/           # 前端页面
 │   │   └── index.html      # 对话式 UI
-│   ├── utils/              # 工具
-│   │   └── logger.py       # 日志
+│   ├── utils/              # 工具函数
+│   │   └── logger.py       # 日志模块
 │   └── config.py           # 全局配置
-├── data/
+├── data/                   # 测试数据
 │   ├── sql/                # 建表语句 + 测试数据
 │   │   └── init_database.sql
 │   └── docs/               # 指标定义文档
@@ -137,12 +140,19 @@ TextSQL-Agent/
 │   ├── docker-compose.yml
 │   ├── Dockerfile.api
 │   └── Dockerfile.sandbox
-├── tests/
-│   └── test_core.py        # 核心测试
-├── main.py                 # 主入口
-├── requirements.txt
-├── .env.example
-└── .gitignore
+├── docs/                   # 项目文档
+├── examples/               # 使用示例
+│   └── query_examples.md   # 典型查询示例
+├── tests/                  # 单元测试
+│   └── test_core.py        # 核心功能测试
+├── .env.example            # 环境变量示例
+├── .gitignore
+├── CHANGELOG.md            # 变更日志
+├── CONTRIBUTING.md         # 贡献指南
+├── LICENSE                 # MIT 开源协议
+├── README.md
+├── main.py                 # 项目主入口
+└── requirements.txt        # Python 依赖
 ```
 
 ## 🔒 安全设计
@@ -167,6 +177,14 @@ TextSQL-Agent/
 | SQL Accuracy | SQL 执行结果正确率 |
 | SQL Syntax Valid | SQL 语法合法率 |
 
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！请先阅读 [贡献指南](CONTRIBUTING.md) 了解开发规范。
+
+## 📋 变更日志
+
+查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新记录。
+
 ## 📝 License
 
-MIT
+本项目基于 [MIT](LICENSE) 协议开源。
